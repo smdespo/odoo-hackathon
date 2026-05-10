@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from groq import Groq
 from dotenv import load_dotenv
+<<<<<<< HEAD
 from fastapi.middleware.cors import CORSMiddleware
 import requests
 import json
@@ -11,6 +12,14 @@ import random
 
 # ─── SETUP ───
 load_dotenv()
+=======
+import requests
+import json
+import os
+
+# 1. LOAD SECRETS & INITIALIZE
+load_dotenv() 
+>>>>>>> origin/Frontend_Aavishkar
 
 FOURSQUARE_API_KEY = os.getenv("FOURSQUARE_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -19,6 +28,7 @@ if not FOURSQUARE_API_KEY or not GROQ_API_KEY:
     raise RuntimeError("Missing API keys! Check your .env file.")
 
 client = Groq(api_key=GROQ_API_KEY)
+<<<<<<< HEAD
 
 app = FastAPI()
 
@@ -55,10 +65,17 @@ class PlaceRequest(BaseModel):       # only destination needed for /places
     destination: str
 
 class TripRequest(BaseModel):        # destination + dates for /generate-catalog
+=======
+app = FastAPI()
+
+# 2. THE API CONTRACT
+class TripRequest(BaseModel):
+>>>>>>> origin/Frontend_Aavishkar
     destination: str
     start_date: str
     end_date: str
 
+<<<<<<< HEAD
 class AutoPlanRequest(BaseModel):    # dates + catalog for /auto-plan
     start_date: str
     end_date: str
@@ -182,11 +199,36 @@ async def generate_catalog(request: TripRequest):
         weather_context = "Weather data temporarily unavailable."
         try:
             weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
+=======
+# 3. THE ENDPOINT
+@app.post("/generate-catalog")
+async def generate_catalog(request: TripRequest):
+    try:
+        # --- PHASE A: GEOCODING ---
+        nom_url = f"https://nominatim.openstreetmap.org/search?q={request.destination}&format=json&limit=1"
+        headers = {"User-Agent": "TraveloopHackathonApp/1.0"} 
+        
+        # Added a 5-second timeout so OpenStreetMap can't freeze our app
+        geo_response = requests.get(nom_url, headers=headers, timeout=5).json()
+        if not geo_response:
+             raise HTTPException(status_code=404, detail="Destination not found on the map.")
+        
+        lat = geo_response[0]["lat"]
+        lon = geo_response[0]["lon"]
+
+        # --- PHASE B: BULLETPROOF LIVE WEATHER ---
+        # If the free weather API is down, we catch the error and keep moving
+        weather_context = "Weather data temporarily unavailable."
+        try:
+            weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
+            # Added a tight 3-second timeout for the weather fetch
+>>>>>>> origin/Frontend_Aavishkar
             weather_data = requests.get(weather_url, timeout=3).json()
             current_temp = weather_data.get("current_weather", {}).get("temperature")
             if current_temp is not None:
                 weather_context = f"The current temperature is {current_temp}°C."
         except Exception as weather_err:
+<<<<<<< HEAD
             print(f"Weather API error (ignoring): {weather_err}")
 
         # Foursquare
@@ -194,12 +236,33 @@ async def generate_catalog(request: TripRequest):
         real_places = []
         if fsq_response.status_code == 200:
             for place in fsq_response.json().get("results", []):
+=======
+            print(f"Weather API timeout/error (ignoring): {weather_err}")
+
+        # --- PHASE C: REAL FOURSQUARE PLACES ---
+        fsq_url = f"https://api.foursquare.com/v3/places/search?ll={lat},{lon}&sort=POPULARITY&limit=15"
+        fsq_headers = {
+            "accept": "application/json",
+            "Authorization": FOURSQUARE_API_KEY
+        }
+        # Added a 5-second timeout here as well
+        fsq_response = requests.get(fsq_url, headers=fsq_headers, timeout=5)
+        
+        real_places = []
+        if fsq_response.status_code == 200:
+            places_data = fsq_response.json().get("results", [])
+            for place in places_data:
+>>>>>>> origin/Frontend_Aavishkar
                 name = place.get("name")
                 cat = place["categories"][0]["name"] if place.get("categories") else "General"
                 real_places.append(f"{name} ({cat})")
         else:
             real_places = ["No Foursquare data available. Use general popular places."]
 
+<<<<<<< HEAD
+=======
+        # --- PHASE D: THE GROQ PROMPT ---
+>>>>>>> origin/Frontend_Aavishkar
         system_prompt = f"""
         You are an expert travel planner API. 
         The user is planning a trip to {request.destination} from {request.start_date} to {request.end_date}.
@@ -223,20 +286,32 @@ async def generate_catalog(request: TripRequest):
         }}
         """
 
+<<<<<<< HEAD
+=======
+        # --- PHASE E: AI GENERATION ---
+>>>>>>> origin/Frontend_Aavishkar
         chat_completion = client.chat.completions.create(
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": "Generate the catalog JSON now."}
             ],
+<<<<<<< HEAD
             model="llama-3.3-70b-versatile",
             temperature=0.3,
             response_format={"type": "json_object"}
+=======
+            # UPGRADED TO THE NEWEST PRODUCTION MODEL
+            model="llama-3.3-70b-versatile",
+            temperature=0.3, 
+            response_format={"type": "json_object"} 
+>>>>>>> origin/Frontend_Aavishkar
         )
 
         ai_response = chat_completion.choices[0].message.content
         return json.loads(ai_response)
 
     except Exception as e:
+<<<<<<< HEAD
         print(f"FATAL Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -293,3 +368,8 @@ async def auto_plan_itinerary(request: AutoPlanRequest):
     except Exception as e:
         print(f"Auto-Planner Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+=======
+        print(f"FATAL Error occurred: {e}")
+        # Now returns the exact string error so you can debug via curl/Postman
+        raise HTTPException(status_code=500, detail=str(e)) 
+>>>>>>> origin/Frontend_Aavishkar

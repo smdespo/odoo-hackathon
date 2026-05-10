@@ -1,1 +1,8 @@
+<<<<<<< HEAD
 .env
+=======
+ai-engine/.env
+ai-engine/venv
+
+ai-engine/__pycache__
+>>>>>>> origin/Frontend_Aavishkar

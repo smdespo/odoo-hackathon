@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -61,3 +62,17 @@ app.listen(PORT, () =>
 );
 
 export default app;
+=======
+import express, { Request, Response, NextFunction } from 'express';
+
+const app = express();
+const port = 3000;
+
+app.get('/', (req: Request, res: Response) => {
+  res.send('Hello World with TypeScript!');
+});
+
+app.listen(port, () => {
+  console.log(`Server running at ${port}`);
+});
+>>>>>>> origin/Frontend_Aavishkar
