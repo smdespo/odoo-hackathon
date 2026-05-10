@@ -3,6 +3,8 @@ from pydantic import BaseModel, EmailStr
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
+from bson import ObjectId
+from datetime import datetime
 
 import os
 
@@ -12,8 +14,7 @@ import os
 
 load_dotenv()
 
-MONGO_URL = "mongodb+srv://sudhiinlook_db_user:eNifcWC0c8r7DBnE@cluster0.caqhfph.mongodb.net/?appName=Cluster0"
-
+MONGO_URL = os.getenv("MONGO_URL")
 # --------------------------------------------------
 # FASTAPI
 # --------------------------------------------------
@@ -27,6 +28,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+class ExperienceRequest(BaseModel):
+    
+    user_id: str
+
+    destination: str
+
+    start_date: str
+
+    end_date: str
+
+    user_experience: str
 
 # --------------------------------------------------
 # MONGODB
@@ -126,3 +138,75 @@ async def register_user(user: UserRegister):
             status_code=500,
             detail=str(e)
         )
+@app.post("/share-experience")
+
+async def share_experience(request: ExperienceRequest):
+
+    try:
+
+        # ------------------------------------------
+        # CHECK USER EXISTS
+        # ------------------------------------------
+
+        existing_user = await db.users.find_one({
+
+            "_id": ObjectId(request.user_id)
+
+        })
+
+        if not existing_user:
+
+            raise HTTPException(
+
+                status_code=404,
+
+                detail="User not found"
+            )
+
+        # ------------------------------------------
+        # PREPARE EXPERIENCE DATA
+        # ------------------------------------------
+
+        experience_data = {
+
+            "user_id": request.user_id,
+
+            "destination": request.destination,
+
+            "start_date": request.start_date,
+
+            "end_date": request.end_date,
+
+            "user_experience": request.user_experience,
+
+            "created_at": str(datetime.now())
+        }
+
+        # ------------------------------------------
+        # SAVE TO MONGODB
+        # ------------------------------------------
+
+        result = await db.experiences.insert_one(
+            experience_data
+        )
+
+        # ------------------------------------------
+        # RESPONSE
+        # ------------------------------------------
+
+        return {
+
+            "message": "Experience shared successfully",
+        }
+
+    except Exception as e:
+
+        print("ERROR:", str(e))
+
+        raise HTTPException(
+
+            status_code=500,
+
+            detail=str(e)
+        )        
+        
