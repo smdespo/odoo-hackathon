@@ -8,12 +8,24 @@ from fastapi.middleware.cors import CORSMiddleware
 import ollama
 from datetime import datetime, timedelta
 import random
+<<<<<<< HEAD
+=======
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, EmailStr
+from motor.motor_asyncio import AsyncIOMotorClient
+from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware
+from bson import ObjectId
+from datetime import datetime
+
+>>>>>>> origin/Rohit
 # -----------------------------------------
 # LOAD ENV VARIABLES
 
 # -----------------------------------------
 app = FastAPI()
 load_dotenv()
+MONGO_URL = os.getenv("MONGO_URL")
 # app.add_middleware(
 #     CORSMiddleware,
 #     allow_origins=["*"],
@@ -79,7 +91,21 @@ Rules:
 
 class TripRequest(BaseModel):
     destination: str
+<<<<<<< HEAD
 
+=======
+class ExperienceRequest(BaseModel):
+    
+    user_id: str
+
+    destination: str
+
+    start_date: str
+
+    end_date: str
+
+    user_experience: str
+>>>>>>> origin/Rohit
 # -----------------------------------------
 # ENDPOINT
 # -----------------------------------------
@@ -509,4 +535,10 @@ async def generate_packing_list(request: PackingRequest):
 
     except Exception as e:
         print(f"Packing List Error: {e}")
+<<<<<<< HEAD
         raise HTTPException(status_code=500, detail=str(e))       
+=======
+        raise HTTPException(status_code=500, detail=str(e))
+     
+          
+>>>>>>> origin/Rohit

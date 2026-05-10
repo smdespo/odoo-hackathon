@@ -209,4 +209,8 @@ async def share_experience(request: ExperienceRequest):
 
             detail=str(e)
         )        
+<<<<<<< HEAD
         
+=======
+        
+>>>>>>> origin/Rohit
