@@ -28,6 +28,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+lient = AsyncIOMotorClient(MONGO_URL)
+
+db = client["traveloop"]
+
+# --------------------------------------------------
+# USER MODEL
+# --------------------------------------------------
+
+class UserRegister(BaseModel):
+
+    first_name: str
+    last_name: str
+
+    email: EmailStr
+
+    phone_number: str
+
+    city: str
+    country: str
+
+    additional_information: str
 
 # ─── MODELS ───
 class PlaceRequest(BaseModel):       # only destination needed for /places
