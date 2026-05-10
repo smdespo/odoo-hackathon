@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 import requests
 import json
 import os
+import random
+from datetime import datetime, timedelta
 
 # 1. LOAD SECRETS & INITIALIZE
 load_dotenv() 
@@ -110,4 +112,82 @@ async def generate_catalog(request: TripRequest):
 
     except Exception as e:
         print(f"FATAL Error occurred: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- THE AUTO-PLANNER ENDPOINT ---
+
+class AutoPlanRequest(BaseModel):
+    start_date: str
+    end_date: str
+    catalog: dict
+
+@app.post("/auto-plan")
+async def auto_plan_itinerary(request: AutoPlanRequest):
+    try:
+        # 1. Calculate the total number of days
+        # We parse the string dates into Python datetime objects to do math on them
+        start = datetime.strptime(request.start_date, "%Y-%m-%d")
+        end = datetime.strptime(request.end_date, "%Y-%m-%d")
+        days_count = (end - start).days + 1
+        
+        if days_count <= 0:
+            raise HTTPException(status_code=400, detail="End date must be after start date")
+
+        # 2. Extract the catalog arrays
+        catalog = request.catalog
+        accs = catalog.get("accommodation", [])
+        dinings = catalog.get("dining", [])
+        acts = catalog.get("activities", [])
+
+        # 3. Pick 1 random accommodation for the whole trip (if any exist in the catalog)
+        chosen_acc = random.choice(accs) if accs else None
+
+        itinerary = []
+        
+        # 4. Loop through every single day and build the schedule
+        for i in range(days_count):
+            # Calculate the actual date for this specific day (e.g., Day 2 is start_date + 1)
+            current_date = (start + timedelta(days=i)).strftime("%Y-%m-%d")
+
+            # Safely pick 2 random dining spots and 2 random activities
+            # We use min() so it doesn't crash if the catalog only generated 1 restaurant
+            day_dining = random.sample(dinings, min(2, len(dinings)))
+            day_acts = random.sample(acts, min(2, len(acts)))
+
+            schedule = []
+            
+            # --- ASSEMBLE THE TIMELINE ---
+            # Morning Activity
+            if len(day_acts) > 0:
+                schedule.append({"time": "09:00", "type": "activity", "item": day_acts[0]})
+            # Lunch
+            if len(day_dining) > 0:
+                schedule.append({"time": "13:00", "type": "dining", "item": day_dining[0]})
+            # Afternoon Activity
+            if len(day_acts) > 1:
+                schedule.append({"time": "15:00", "type": "activity", "item": day_acts[1]})
+            # Dinner
+            if len(day_dining) > 1:
+                schedule.append({"time": "19:00", "type": "dining", "item": day_dining[1]})
+
+            # Package the day
+            day_plan = {
+                "day_number": i + 1,
+                "date": current_date,
+                "schedule": schedule
+            }
+            
+            # We only attach the accommodation data to Day 1 so the UI can show "Check-in"
+            if i == 0 and chosen_acc:
+                day_plan["accommodation"] = chosen_acc
+
+            itinerary.append(day_plan)
+
+        return {"status": "success", "itinerary": itinerary}
+
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    except Exception as e:
+        print(f"Auto-Planner Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
